@@ -15,6 +15,29 @@ impl Parser {
     fn eof(&self) -> bool {
         self.pos >= self.input.len()
     }
+
+    fn consume_char(&mut self) -> char {
+        let mut iter = self.input[self.pos..].char_indices();
+        let (_, current_char) = iter.next().unwrap();
+        self.pos += 1;
+        current_char
+    }
+
+    fn consume_while<F>(&mut self, condition: F) -> String
+    where
+        F: Fn(char) -> bool,
+    {
+        let mut result = String::new();
+        while !self.eof() && condition(self.next_char()) {
+            result.push(self.consume_char());
+        }
+
+        result
+    }
+
+    fn consume_whitespace(&mut self) {
+        self.consume_while(|c| c.is_whitespace());
+    }
 }
 
 #[cfg(test)]
@@ -72,6 +95,55 @@ mod tests {
                     input: input.to_string()
                 };
                 assert_eq!(parser.eof(), expected);
+            }
+        }
+
+        describe "'consume_while'" {
+            describe "returns string while find a first character does not sutisfy the condition" {
+                #[rstest(input, pos, condition, expected,
+                    case("hello world!", 0, |c| c != ' ', "hello"),
+                    case("hello world!", 3, |c| c != 'l', ""),
+                    case("hello world!", 7, |c: char| c.is_alphanumeric(), "orld"),
+                )]
+                fn test_consume_while_with_condition<F>(input: &str, pos: usize, condition: F, expected: &str)
+                where
+                    F: Fn(char) -> bool
+                {
+                    let mut parser = Parser {
+                        pos: pos,
+                        input: input.to_string()
+                    };
+                    assert_eq!(parser.consume_while(condition), expected);
+                }
+            }
+
+            describe "returns whole string if all the characters sutisfy the condition" {
+                #[rstest(input, pos, condition, expected,
+                    case("hello world!", 0, |_| true, "hello world!"),
+                    case("hello world!", 6, |c: char| c.is_alphabetic() || c == '!', "world!"),
+                )]
+                fn test_consume_while_until_the_end<F>(input: &str, pos: usize, condition: F, expected: &str)
+                where
+                    F: Fn(char) -> bool
+                {
+                    let mut parser = Parser {
+                        pos: pos,
+                        input: input.to_string()
+                    };
+                    assert_eq!(parser.consume_while(condition), expected);
+                }
+            }
+        }
+
+        describe "'consume_whitespace' ignores a sequence of whitespace" {
+            #[rstest]
+            fn test_consume_whitespace() {
+                 let mut parser = Parser {
+                    pos: 0,
+                    input: "    a    b c".to_string()
+                };
+                parser.consume_whitespace();
+                assert_eq!(parser.next_char(), 'a');
             }
         }
     }
