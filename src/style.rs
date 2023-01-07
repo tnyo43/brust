@@ -8,8 +8,26 @@ pub struct Selector {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+enum Unit {
+    Px,
+    Percent,
+    Em,
+    Rem,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct Color {
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     String(String),
+    Size(f32, Unit),
+    Color(Color),
 }
 
 #[derive(Debug, PartialEq)]
