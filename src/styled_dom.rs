@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crate::dom::{ElementData, Node, NodeType};
-use crate::style::{Rule, Selector, Specificity, StyleSheet};
+use crate::style::{Rule, Selector, Specificity, StyleSheet, Value};
 
 type MatchedRule<'a> = (Specificity, &'a Rule);
 
-type PropertyMap = HashMap<String, String>;
+type PropertyMap = HashMap<String, Value>;
 
 pub struct StyledNode<'a> {
     node: &'a Node,
@@ -264,14 +264,14 @@ mod tests {
                     ElementData::new("a".to_string(), AttributeMap::new()),
                     "a { display: block; }",
                     PropertyMap::from([
-                        ("display".to_string(), "block".to_string())
+                        ("display".to_string(), Value::String("block".to_string()))
                     ]),
                 ),
                 case(
                     ElementData::new("a".to_string(), AttributeMap::new()),
                     "a { display: block; } a { display: flex; }",
                     PropertyMap::from([
-                        ("display".to_string(), "flex".to_string())
+                        ("display".to_string(), Value::String("flex".to_string()))
                     ])
                 ),
                 case(
@@ -281,9 +281,9 @@ mod tests {
                     ])),
                     "a { display: block; }  b { height: 10px; } a.link { display: flex; } #id { color: red; color: blue; color: white; color: black; } a.link1.link2 { background-color: green; }",
                     PropertyMap::from([
-                        ("display".to_string(), "flex".to_string()),
-                        ("color".to_string(), "black".to_string()),
-                        ("background-color".to_string(), "green".to_string()),
+                        ("display".to_string(), Value::String("flex".to_string())),
+                        ("color".to_string(), Value::String("black".to_string())),
+                        ("background-color".to_string(), Value::String("green".to_string())),
                     ])
                 ),
             )]

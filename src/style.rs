@@ -1,3 +1,5 @@
+use std::clone;
+
 #[derive(Debug, PartialEq)]
 pub struct Selector {
     pub tag: Option<String>,
@@ -6,9 +8,14 @@ pub struct Selector {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum Value {
+    String(String),
+}
+
+#[derive(Debug, PartialEq)]
 pub struct Declaration {
     pub name: String,
-    pub value: String,
+    pub value: Value,
 }
 
 #[derive(Debug, PartialEq)]
@@ -42,11 +49,19 @@ impl Selector {
     }
 }
 
+impl Value {
+    pub fn clone(&self) -> Self {
+        match self {
+            Value::String(s) => Value::String(s.clone()),
+        }
+    }
+}
+
 impl Declaration {
     pub fn new(name: String, value: String) -> Self {
         Declaration {
             name: name,
-            value: value,
+            value: Value::String(value),
         }
     }
 }
