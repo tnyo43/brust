@@ -1,6 +1,6 @@
 use crate::dom::{AttributeMap, Node};
 
-pub struct Parser {
+struct Parser {
     pos: usize,
     input: String,
 }
@@ -64,6 +64,7 @@ impl Parser {
     }
 
     fn parse_text(&mut self) -> Node {
+        dbg!("parse");
         Node::text(self.consume_while(|c| c != '<'))
     }
 
@@ -130,6 +131,11 @@ impl Parser {
 
         elements
     }
+}
+
+pub fn parse(data: String) -> Node {
+    let mut parser = Parser::new(data.to_string());
+    parser.parse_node()
 }
 
 #[cfg(test)]
@@ -319,6 +325,51 @@ mod tests {
 
                     assert_eq!(parser.parse_element(), expected)
                 }
+            }
+        }
+
+        describe "'parse' returns DOM nodes" {
+            #[rstest(input, expected,
+                case(
+                    "<div></div>",
+                    Node::element("div".to_string(), AttributeMap::new(), Vec::new())
+                ),
+                case(
+                    "hello world!",
+                    Node::text("hello world!".to_string())
+                ),
+                case(
+                    "    <div id='main'   class=\"container\">   <h1>   title</h1>hi<button   onclick=\"function\">   click me!</button>    <p>   abc<b>   def</b>ghi</p>    </div>    ",
+                    Node::element("div".to_string(), AttributeMap::from([("id".to_string(), "main".to_string()), ("class".to_string(), "container".to_string())]), Vec::from([
+                        Node::element("h1".to_string(), AttributeMap::new(), Vec::from([
+                            Node::text("title".to_string())
+                        ])),
+                        Node::text("hi".to_string()),
+                        Node::element("button".to_string(), AttributeMap::from([("onclick".to_string(), "function".to_string())]), Vec::from([
+                            Node::text("click me!".to_string())
+                        ])),
+                        Node::element("p".to_string(), AttributeMap::new(), Vec::from([
+                            Node::text("abc".to_string()),
+                            Node::element("b".to_string(), AttributeMap::new(), Vec::from([
+                                Node::text("def".to_string()),
+                            ])),
+                            Node::text("ghi".to_string()),
+                        ])),
+                    ]))
+                )
+            )]
+            fn test_parse_valid_html(input: &str, expected: Node) {
+                assert_eq!(parse(input.to_string()), expected);
+            }
+
+            #[should_panic]
+            #[rstest(input,
+                case("<div></div"),
+                case("<div></p>"),
+                case("<div id=class></div>"),
+            )]
+            fn test_should_panic_parse_invalid_html(input: &str) {
+                parse(input.to_string());
             }
         }
     }
