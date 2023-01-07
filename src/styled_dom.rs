@@ -196,7 +196,7 @@ mod tests {
                     Vec::from([
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
-                            Vec::from([Declaration::new("display".to_string(), "block".to_string())])
+                            Vec::from([Declaration::new("display".to_string(), Value::String("block".to_string()))])
                         )
                     ])
                 ),
@@ -206,11 +206,11 @@ mod tests {
                     Vec::from([
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
-                            Vec::from([Declaration::new("display".to_string(), "block".to_string()),])
+                            Vec::from([Declaration::new("display".to_string(),Value::String("block".to_string()))])
                         ),
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
-                            Vec::from([Declaration::new("display".to_string(), "flex".to_string()),])
+                            Vec::from([Declaration::new("display".to_string(), Value::String("flex".to_string()))])
                         )
                     ])
                 ),
@@ -223,19 +223,19 @@ mod tests {
                     Vec::from([
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
-                            Vec::from([Declaration::new("display".to_string(), "block".to_string()),])
+                            Vec::from([Declaration::new("display".to_string(), Value::String("block".to_string()))])
                         ),
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::from(["link".to_string()]))]),
-                            Vec::from([Declaration::new("display".to_string(), "flex".to_string()),])
+                            Vec::from([Declaration::new("display".to_string(), Value::String("flex".to_string()))])
                         ),
                         Rule::new(
                             Vec::from([Selector::new(None, Some("id".to_string()), Vec::new())]),
-                            Vec::from([Declaration::new("color".to_string(), "red".to_string()),])
+                            Vec::from([Declaration::new("color".to_string(), Value::String("red".to_string()))])
                         ),
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::from(["link1".to_string(), "link2".to_string()]))]),
-                            Vec::from([Declaration::new("background-color".to_string(), "green".to_string()),])
+                            Vec::from([Declaration::new("background-color".to_string(), Value::String("green".to_string()))])
                         ),
                     ])
                 ),

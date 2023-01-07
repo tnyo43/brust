@@ -68,10 +68,10 @@ impl Selector {
 }
 
 impl Declaration {
-    pub fn new(name: String, value: String) -> Self {
+    pub fn new(name: String, value: Value) -> Self {
         Declaration {
             name: name,
-            value: Value::String(value),
+            value: value,
         }
     }
 }
