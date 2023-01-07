@@ -1,9 +1,18 @@
+use crate::dom::{AttributeMap, Node};
+
 pub struct Parser {
     pos: usize,
     input: String,
 }
 
 impl Parser {
+    fn new(input: String) -> Self {
+        Parser {
+            pos: 0,
+            input: input,
+        }
+    }
+
     fn next_char(&self) -> char {
         self.input[self.pos..].chars().next().unwrap()
     }
@@ -37,6 +46,46 @@ impl Parser {
 
     fn consume_whitespace(&mut self) {
         self.consume_while(|c| c.is_whitespace());
+    }
+
+    fn parse_tag_string(&mut self) -> String {
+        self.consume_while(|c| match c {
+            'a'..='z' | 'A'..='Z' | '0'..='9' => true,
+            _ => false,
+        })
+    }
+
+    fn parse_node(&mut self) -> Node {
+        self.consume_whitespace();
+        match self.next_char() {
+            '<' => self.parse_element(),
+            _ => self.parse_text(),
+        }
+    }
+
+    fn parse_text(&mut self) -> Node {
+        Node::text(self.consume_while(|c| c != '>'))
+    }
+
+    fn parse_element(&mut self) -> Node {
+        assert!(self.consume_char() == '<');
+
+        let name = self.parse_tag_string();
+        let attributes = AttributeMap::new();
+
+        assert!(self.consume_char() == '>');
+
+        let children = Vec::<Node>::new();
+
+        assert!(self.start_with(format!("</{name}>").to_string().as_str()));
+
+        loop {
+            if self.consume_char() == '>' {
+                break;
+            }
+        }
+
+        Node::element(name, attributes, children)
     }
 }
 
@@ -144,6 +193,33 @@ mod tests {
                 };
                 parser.consume_whitespace();
                 assert_eq!(parser.next_char(), 'a');
+            }
+        }
+
+        describe "'parse_element'" {
+            describe "returns element without any attribute and children" {
+                #[rstest()]
+                fn test_parse_element_with_simple_element() {
+                    let mut parser = Parser::new("<div></div>".to_string());
+
+                    assert_eq!(parser.parse_element(), Node::element("div".to_string(), AttributeMap::new(), vec![]));
+                }
+
+                #[should_panic]
+                #[rstest]
+                fn test_parse_should_panic_element_without_closing_tag() {
+                    let mut parser = Parser::new("<input>".to_string());
+
+                    parser.parse_element();
+                }
+
+                #[should_panic]
+                #[rstest]
+                fn test_parse_should_panic_element_with_invalid_tag() {
+                    let mut parser = Parser::new("<div />".to_string());
+
+                    parser.parse_element();
+                }
             }
         }
     }
