@@ -64,7 +64,7 @@ impl Parser {
     }
 
     fn parse_text(&mut self) -> Node {
-        Node::text(self.consume_while(|c| c != '>'))
+        Node::text(self.consume_while(|c| c != '<'))
     }
 
     fn parse_attribute(&mut self) -> (String, String) {
@@ -103,10 +103,9 @@ impl Parser {
 
         assert!(self.consume_char() == '>');
 
-        let children = Vec::<Node>::new();
+        let children = self.parse_elements();
 
         assert!(self.start_with(format!("</{name}>").to_string().as_str()));
-
         loop {
             if self.consume_char() == '>' {
                 break;
@@ -114,6 +113,22 @@ impl Parser {
         }
 
         Node::element(name, attributes, children)
+    }
+
+    fn parse_elements(&mut self) -> Vec<Node> {
+        let mut elements = Vec::<Node>::new();
+        loop {
+            self.consume_whitespace();
+
+            assert!(!self.eof());
+            if self.start_with("</") {
+                break;
+            }
+
+            elements.push(self.parse_node());
+        }
+
+        elements
     }
 }
 
@@ -262,6 +277,44 @@ mod tests {
                     )
                 )]
                 fn test_parse_attributes_with_single_attribute(input: &str, expected: Node) {
+                    let mut parser = Parser::new(input.to_string());
+
+                    assert_eq!(parser.parse_element(), expected)
+                }
+            }
+
+            describe "returns element with children" {
+                #[rstest(input, expected,
+                    case(
+                        "<div>hello</div>",
+                        Node::element("div".to_string(), AttributeMap::new(), Vec::<Node>::from([
+                            Node::text("hello".to_string())
+                        ]))
+                    ),
+                    case(
+                        "<div><p>hello</p><button>click</button></div>",
+                        Node::element("div".to_string(), AttributeMap::new(), Vec::<Node>::from([
+                            Node::element("p".to_string(), AttributeMap::new(), Vec::from([
+                                Node::text("hello".to_string())
+                            ])),
+                            Node::element("button".to_string(), AttributeMap::new(), Vec::from([
+                                Node::text("click".to_string())
+                            ]))
+                        ]))
+                    ),
+                    case(
+                        "<div><div><div><div></div></div></div></div>",
+                        // Node::text("a".to_string())
+                        Node::element("div".to_string(), AttributeMap::new(), Vec::<Node>::from([
+                            Node::element("div".to_string(), AttributeMap::new(), Vec::<Node>::from([
+                                Node::element("div".to_string(), AttributeMap::new(), Vec::<Node>::from([
+                                    Node::element("div".to_string(), AttributeMap::new(), Vec::<Node>::new())
+                                ]))
+                            ]))
+                        ]))
+                    )
+                )]
+                fn test_parse_element_with_children(input: &str, expected: Node) {
                     let mut parser = Parser::new(input.to_string());
 
                     assert_eq!(parser.parse_element(), expected)
