@@ -4,25 +4,25 @@ use crate::{
 };
 
 struct CSSParser {
-    parser: Parser,
+    base: Parser,
 }
 
 impl CSSParser {
     fn new(input: String) -> Self {
         CSSParser {
-            parser: Parser::new(input),
+            base: Parser::new(input),
         }
     }
 
     fn is_valid_identifier_initial_char(&self) -> bool {
-        match self.parser.next_char() {
+        match self.base.next_char() {
             'a'..='z' | 'A'..='Z' => true,
             _ => false,
         }
     }
 
     fn parse_identifier(&mut self) -> String {
-        self.parser.consume_while(|c| match c {
+        self.base.consume_while(|c| match c {
             'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => true,
             _ => false,
         })
@@ -31,15 +31,15 @@ impl CSSParser {
     fn parse_selector(&mut self) -> Selector {
         let mut selector = Selector::new(None, None, Vec::new());
 
-        while !self.parser.eof() {
-            self.parser.consume_whitespace();
-            match self.parser.next_char() {
+        while !self.base.eof() {
+            self.base.consume_whitespace();
+            match self.base.next_char() {
                 '#' => {
-                    self.parser.consume_char();
+                    self.base.consume_char();
                     selector.id = Some(self.parse_identifier());
                 }
                 '.' => {
-                    self.parser.consume_char();
+                    self.base.consume_char();
                     selector.class.push(self.parse_identifier());
                 }
                 _ if self.is_valid_identifier_initial_char() => {
@@ -57,42 +57,42 @@ impl CSSParser {
     fn parse_selectors(&mut self) -> Vec<Selector> {
         let mut selectors = Vec::new();
 
-        while !self.parser.eof() {
-            self.parser.consume_whitespace();
+        while !self.base.eof() {
+            self.base.consume_whitespace();
 
             selectors.push(self.parse_selector());
 
-            self.parser.consume_whitespace();
-            if self.parser.eof() || self.parser.next_char() != ',' {
+            self.base.consume_whitespace();
+            if self.base.eof() || self.base.next_char() != ',' {
                 break;
             }
-            self.parser.consume_char();
+            self.base.consume_char();
         }
 
         selectors
     }
 
     fn parse_declarations(&mut self) -> Vec<Declaration> {
-        assert!(self.parser.consume_char() == '{');
+        assert!(self.base.consume_char() == '{');
 
         let mut declarations = Vec::new();
 
         loop {
-            self.parser.consume_whitespace();
+            self.base.consume_whitespace();
 
-            if self.parser.next_char() == '}' {
-                self.parser.consume_char();
+            if self.base.next_char() == '}' {
+                self.base.consume_char();
                 break;
             }
 
             let name = self.parse_identifier();
 
-            self.parser.consume_whitespace();
-            assert!(self.parser.consume_char() == ':');
-            self.parser.consume_whitespace();
+            self.base.consume_whitespace();
+            assert!(self.base.consume_char() == ':');
+            self.base.consume_whitespace();
 
-            let value = self.parser.consume_while(|c| c != ';');
-            assert!(self.parser.consume_char() == ';');
+            let value = self.base.consume_while(|c| c != ';');
+            assert!(self.base.consume_char() == ';');
 
             declarations.push(Declaration::new(name, value));
         }
@@ -101,10 +101,10 @@ impl CSSParser {
     }
 
     fn parse_rule(&mut self) -> Rule {
-        self.parser.consume_whitespace();
+        self.base.consume_whitespace();
         let selectors = self.parse_selectors();
 
-        self.parser.consume_whitespace();
+        self.base.consume_whitespace();
         let declarations = self.parse_declarations();
 
         Rule::new(selectors, declarations)
@@ -114,9 +114,9 @@ impl CSSParser {
         let mut rules = Vec::new();
 
         loop {
-            self.parser.consume_whitespace();
+            self.base.consume_whitespace();
 
-            if self.parser.eof() {
+            if self.base.eof() {
                 break;
             }
 

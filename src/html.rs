@@ -2,26 +2,26 @@ use crate::dom::{AttributeMap, Node};
 use crate::parser::Parser;
 
 struct HTMLParser {
-    parser: Parser,
+    base: Parser,
 }
 
 impl HTMLParser {
     fn new(input: String) -> Self {
         HTMLParser {
-            parser: Parser::new(input),
+            base: Parser::new(input),
         }
     }
 
     fn parse_tag_string(&mut self) -> String {
-        self.parser.consume_while(|c| match c {
+        self.base.consume_while(|c| match c {
             'a'..='z' | 'A'..='Z' | '0'..='9' => true,
             _ => false,
         })
     }
 
     fn parse_node(&mut self) -> Node {
-        self.parser.consume_whitespace();
-        match self.parser.next_char() {
+        self.base.consume_whitespace();
+        match self.base.next_char() {
             '<' => self.parse_element(),
             _ => self.parse_text(),
         }
@@ -29,16 +29,16 @@ impl HTMLParser {
 
     fn parse_text(&mut self) -> Node {
         dbg!("parse");
-        Node::text(self.parser.consume_while(|c| c != '<'))
+        Node::text(self.base.consume_while(|c| c != '<'))
     }
 
     fn parse_attribute(&mut self) -> (String, String) {
         let name = self.parse_tag_string();
-        assert!(self.parser.consume_char() == '=');
-        let open_quote = self.parser.consume_char();
+        assert!(self.base.consume_char() == '=');
+        let open_quote = self.base.consume_char();
         assert!(open_quote == '"' || open_quote == '\'');
         let value = self.parse_tag_string();
-        let close_quote = self.parser.consume_char();
+        let close_quote = self.base.consume_char();
         assert!(close_quote == open_quote);
         (name, value)
     }
@@ -47,9 +47,9 @@ impl HTMLParser {
         let mut attributes = AttributeMap::new();
 
         loop {
-            self.parser.consume_whitespace();
+            self.base.consume_whitespace();
 
-            if self.parser.next_char() == '>' {
+            if self.base.next_char() == '>' {
                 break;
             }
 
@@ -61,20 +61,20 @@ impl HTMLParser {
     }
 
     fn parse_element(&mut self) -> Node {
-        assert!(self.parser.consume_char() == '<');
+        assert!(self.base.consume_char() == '<');
 
         let name = self.parse_tag_string();
         let attributes = self.parse_attributes();
 
-        assert!(self.parser.consume_char() == '>');
+        assert!(self.base.consume_char() == '>');
 
         let children = self.parse_elements();
 
         assert!(self
-            .parser
+            .base
             .start_with(format!("</{name}>").to_string().as_str()));
         loop {
-            if self.parser.consume_char() == '>' {
+            if self.base.consume_char() == '>' {
                 break;
             }
         }
@@ -85,10 +85,10 @@ impl HTMLParser {
     fn parse_elements(&mut self) -> Vec<Node> {
         let mut elements = Vec::<Node>::new();
         loop {
-            self.parser.consume_whitespace();
+            self.base.consume_whitespace();
 
-            assert!(!self.parser.eof());
-            if self.parser.start_with("</") {
+            assert!(!self.base.eof());
+            if self.base.start_with("</") {
                 break;
             }
 
