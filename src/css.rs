@@ -1,10 +1,44 @@
 use crate::{
     parser::Parser,
-    style::{Declaration, Rule, Selector, StyleSheet, Value},
+    style::{Color, Declaration, Rule, Selector, StyleSheet, Unit, Value},
 };
 
 struct CSSParser {
     base: Parser,
+}
+
+fn parse_value(value: String) -> Value {
+    if value.starts_with('#') {
+        assert!(value.len() == 7);
+        let r = u8::from_str_radix(&value[1..=2], 16).unwrap();
+        let g = u8::from_str_radix(&value[3..=4], 16).unwrap();
+        let b = u8::from_str_radix(&value[5..=6], 16).unwrap();
+        return Value::color(r, g, b);
+    }
+
+    if ('0'..='9').contains(&value.chars().next().unwrap()) {
+        let (num, unit) = if value.ends_with("px") {
+            ((value[..value.len() - 2]).parse::<f32>().unwrap(), Unit::Px)
+        } else if value.ends_with("%") {
+            (
+                (value[..value.len() - 1]).parse::<f32>().unwrap(),
+                Unit::Percent,
+            )
+        } else if value.ends_with("rem") {
+            (
+                (value[..value.len() - 3]).parse::<f32>().unwrap(),
+                Unit::Rem,
+            )
+        } else if value.ends_with("em") {
+            ((value[..value.len() - 2]).parse::<f32>().unwrap(), Unit::Em)
+        } else {
+            ((value).parse::<f32>().unwrap(), Unit::None)
+        };
+
+        return Value::size(num, unit);
+    }
+
+    Value::string(value)
 }
 
 impl CSSParser {
@@ -91,10 +125,10 @@ impl CSSParser {
             assert!(self.base.consume_char() == ':');
             self.base.consume_whitespace();
 
-            let value = self.base.consume_while(|c| c != ';');
+            let valueText = self.base.consume_while(|c| c != ';');
             assert!(self.base.consume_char() == ';');
 
-            declarations.push(Declaration::new(name, Value::String(value)));
+            declarations.push(Declaration::new(name, parse_value(valueText)));
         }
 
         declarations
@@ -143,6 +177,51 @@ mod tests {
     use super::*;
 
     speculate! {
+        describe "'parse_value'" {
+            describe "if value start with '#', value is parsed to color" {
+                #[rstest(input, expected,
+                    case("#000000", Value::color(0, 0, 0)),
+                    case("#123456", Value::color(18, 52, 86)),
+                    case("#abcdef", Value::color(171, 205, 239)),
+                )]
+                fn parse_color_code(input: &str, expected: Value) {
+                    assert_eq!(parse_value(input.to_string()), expected);
+                }
+
+                #[should_panic]
+                #[rstest(input,
+                    case("#123"),
+                    case("#1111111"),
+                    case("#zyxwvut"),
+                )]
+                fn fail_to_parse_with_invalid_color(input: &str) {
+                    parse_value(input.to_string());
+                }
+            }
+
+            describe "if value start with number, value is parsed to size" {
+                #[rstest(input, expected,
+                    case("10px", Value::size(10.0, Unit::Px)),
+                    case("43%", Value::size(43.0, Unit::Percent)),
+                    case("1.4em", Value::size(1.4, Unit::Em)),
+                    case("0.1rem", Value::size(0.1, Unit::Rem)),
+                    case("10000", Value::size(10000.0, Unit::None)),
+                )]
+                fn parse_color_code(input: &str, expected: Value) {
+                    assert_eq!(parse_value(input.to_string()), expected);
+                }
+
+                #[should_panic]
+                #[rstest(input,
+                    case("1hogehogepx"),
+                    case("1ab"),
+                )]
+                fn fail_to_parse_with_invalid_size(input: &str) {
+                    parse_value(input.to_string());
+                }
+            }
+        }
+
         describe "'parse_selectors' parse selector" {
             #[rstest(input, expected,
                 case(

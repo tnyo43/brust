@@ -1,5 +1,3 @@
-use std::clone;
-
 #[derive(Debug, PartialEq)]
 pub struct Selector {
     pub tag: Option<String>,
@@ -8,19 +6,19 @@ pub struct Selector {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum Unit {
+pub enum Unit {
     Px,
     Percent,
     Em,
     Rem,
+    None,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct Color {
+pub struct Color {
     r: u8,
     g: u8,
     b: u8,
-    a: u8,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -64,6 +62,20 @@ impl Selector {
             self.class.len(),
             self.tag.iter().count(),
         )
+    }
+}
+
+impl Value {
+    pub fn string(value: String) -> Self {
+        Value::String(value)
+    }
+
+    pub fn size(x: f32, unit: Unit) -> Self {
+        Value::Size(x, unit)
+    }
+
+    pub fn color(r: u8, g: u8, b: u8) -> Self {
+        Value::Color(Color { r, g, b })
     }
 }
 
