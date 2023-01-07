@@ -272,8 +272,13 @@ mod tests {
                 case("{}", Vec::new()),
                 case("{ display: block; }", Vec::from([Declaration::new("display".to_string(), Value::String("block".to_string()))])),
                 case(
-                    "{ border: 1px solid #123456; background-color: red; }",
-                    Vec::from([Declaration::new("border".to_string(), Value::String("1px solid #123456".to_string())), Declaration::new("background-color".to_string(), Value::String("red".to_string()))])
+                    "{ border-width: 1px; border-style: solid; border-color: #123456; background-color: red; }",
+                    Vec::from([
+                        Declaration::new("border-width".to_string(), Value::size(1.0, Unit::Px)),
+                        Declaration::new("border-style".to_string(), Value::string("solid".to_string())),
+                        Declaration::new("border-color".to_string(), Value::color(18, 52, 86)),
+                        Declaration::new("background-color".to_string(), Value::String("red".to_string()))
+                    ])
                 )
             )]
             fn test_parse_declarations(input: &str, expected: Vec<Declaration>) {
@@ -294,7 +299,7 @@ mod tests {
                         ]),
                         Vec::from([
                             Declaration::new("display".to_string(), Value::String("flex".to_string())),
-                            Declaration::new("margin-top".to_string(), Value::String("16px".to_string())),
+                            Declaration::new("margin-top".to_string(), Value::size(16.0, Unit::Px)),
                         ])
                     )
                 ),
@@ -315,14 +320,14 @@ mod tests {
                             Vec::from([Selector::new(Some("a".to_string()), Some("link".to_string()), Vec::new())]),
                             Vec::from([
                                 Declaration::new("display".to_string(), Value::String("flex".to_string())),
-                                Declaration::new("color".to_string(), Value::String("#d3a003".to_string()))
+                                Declaration::new("color".to_string(), Value::color(211, 160, 3))
                             ])
                         ),
                         Rule::new(
                             Vec::from([Selector::new(None, None, Vec::from(["cls".to_string()])), Selector::new(None, Some("modal".to_string()), Vec::new())]),
                             Vec::from([
                                 Declaration::new("position".to_string(), Value::String("absolute".to_string())),
-                                Declaration::new("top".to_string(), Value::String("50%".to_string())),
+                                Declaration::new("top".to_string(), Value::size(50.0, Unit::Percent)),
                             ])
                         )
                     ]))
