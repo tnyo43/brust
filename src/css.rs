@@ -54,6 +54,24 @@ impl CSSParser {
         selector
     }
 
+    fn parse_selectors(&mut self) -> Vec<Selector> {
+        let mut selectors = Vec::new();
+
+        while !self.parser.eof() {
+            self.parser.consume_whitespace();
+
+            selectors.push(self.parse_selector());
+
+            self.parser.consume_whitespace();
+            if self.parser.eof() || self.parser.next_char() != ',' {
+                break;
+            }
+            self.parser.consume_char();
+        }
+
+        selectors
+    }
+
     fn parse_declarations(&mut self) -> Vec<Declaration> {
         assert!(self.parser.consume_char() == '{');
 
@@ -94,23 +112,42 @@ mod tests {
     use super::*;
 
     speculate! {
-        describe "'parse_selector' parse selector" {
+        describe "'parse_selectors' parse selector" {
             #[ignore]
             #[rstest(input, expected,
-                case(".hoge__fizz-bar", Selector::new(None, None, Vec::from(["hoge__fizz-bar".to_string()]))),
+                case(
+                    ".hoge__fizz-bar",
+                    Vec::from([Selector::new(None, None, Vec::from(["hoge__fizz-bar".to_string()]))])
+                ),
                 case(
                     "div.a.b.c.d",
-                    Selector::new(Some("div".to_string()), None,  Vec::from(["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ])),
+                    Vec::from([Selector::new(Some("div".to_string()), None,  Vec::from(["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string() ]))]),
                 ),
                 case(
                     "button#submit_name.main",
-                    Selector::new(Some("button".to_string()), Some("submit_name".to_string()), Vec::from(["main".to_string() ]))
+                    Vec::from([Selector::new(Some("button".to_string()), Some("submit_name".to_string()), Vec::from(["main".to_string() ]))])
+                ),
+                case(
+                    "h1,h2,    h3",
+                    Vec::from([
+                        Selector::new(Some("h1".to_string()), None, Vec::new()),
+                        Selector::new(Some("h2".to_string()), None, Vec::new()),
+                        Selector::new(Some("h3".to_string()), None, Vec::new()),
+                    ])
+                ),
+                case(
+                    "#xxx,h2.hoge,#bar.hugahuga",
+                    Vec::from([
+                        Selector::new(None, Some("xxx".to_string()), Vec::new()),
+                        Selector::new(Some("h2".to_string()), None, Vec::from(["hoge".to_string()])),
+                        Selector::new(None, Some("bar".to_string()), Vec::from(["hugahuga".to_string()])),
+                    ])
                 ),
             )]
-            fn test_parse_tag_id_class(input: &str, expected: Selector) {
+            fn test_parse_tag_id_class(input: &str, expected: Vec::<Selector>) {
                 let mut css_parser = CSSParser::new(input.to_string());
 
-                assert_eq!(css_parser.parse_selector(), expected);
+                assert_eq!(css_parser.parse_selectors(), expected);
             }
         }
 
