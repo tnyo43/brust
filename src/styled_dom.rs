@@ -1,5 +1,17 @@
-use crate::dom::ElementData;
-use crate::style::Selector;
+use std::collections::HashMap;
+
+use crate::dom::{ElementData, Node, NodeType};
+use crate::style::{Rule, Selector, Specificity, StyleSheet};
+
+type MatchedRule<'a> = (Specificity, &'a Rule);
+
+type PropertyMap = HashMap<String, String>;
+
+pub struct StyledNode<'a> {
+    node: &'a Node,
+    specified_values: PropertyMap,
+    children: Vec<StyledNode<'a>>,
+}
 
 fn matches_selector(element_data: &ElementData, selector: &Selector) -> bool {
     if selector.tag.iter().any(|tag| element_data.tag_name != *tag) {
@@ -22,6 +34,54 @@ fn matches_selector(element_data: &ElementData, selector: &Selector) -> bool {
     true
 }
 
+fn matching_rule<'a>(element_data: &ElementData, rule: &'a Rule) -> Option<MatchedRule<'a>> {
+    rule.selectors
+        .iter()
+        .find(|selector| matches_selector(element_data, *selector))
+        .map(|selector| (selector.specificity(), rule))
+}
+
+fn matching_rules<'a>(
+    element_data: &ElementData,
+    stylesheet: &'a StyleSheet,
+) -> Vec<MatchedRule<'a>> {
+    stylesheet
+        .rules
+        .iter()
+        .filter_map(|rule| matching_rule(element_data, rule))
+        .collect()
+}
+
+fn specified_values(element_data: &ElementData, stylesheet: &StyleSheet) -> PropertyMap {
+    let mut property_map = PropertyMap::new();
+
+    let mut rules = matching_rules(element_data, stylesheet);
+    rules.sort_by(|(a, _), (b, _)| a.cmp(b));
+
+    for (_, rule) in rules {
+        for declaration in &rule.declarations {
+            property_map.insert(declaration.name.clone(), declaration.value.clone());
+        }
+    }
+
+    property_map
+}
+
+pub fn style_tree<'a>(root: &'a Node, stylesheet: &'a StyleSheet) -> StyledNode<'a> {
+    StyledNode {
+        node: root,
+        specified_values: match root.node_type {
+            NodeType::Element(ref element_data) => specified_values(element_data, stylesheet),
+            NodeType::Text(_) => HashMap::new(),
+        },
+        children: root
+            .children
+            .iter()
+            .map(|child| style_tree(child, stylesheet))
+            .collect(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     extern crate rstest;
@@ -31,7 +91,9 @@ mod tests {
     use speculate::speculate;
 
     use super::*;
+    use crate::css;
     use crate::dom::AttributeMap;
+    use crate::style::Declaration;
 
     speculate! {
         describe "'matches_selector'" {
@@ -118,6 +180,116 @@ mod tests {
                     }
 
                 }
+            }
+        }
+
+        describe "'matching_rules' returns rules matched for the element" {
+            #[rstest(element_data, stylesheet_data, expected_rules,
+                case(
+                    ElementData::new("a".to_string(), AttributeMap::new()),
+                    "",
+                    Vec::new()
+                ),
+                case(
+                    ElementData::new("a".to_string(), AttributeMap::new()),
+                    "a { display: block; }",
+                    Vec::from([
+                        Rule::new(
+                            Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
+                            Vec::from([Declaration::new("display".to_string(), "block".to_string())])
+                        )
+                    ])
+                ),
+                case(
+                    ElementData::new("a".to_string(), AttributeMap::new()),
+                    "a { display: block; } a { display: flex; }",
+                    Vec::from([
+                        Rule::new(
+                            Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
+                            Vec::from([Declaration::new("display".to_string(), "block".to_string()),])
+                        ),
+                        Rule::new(
+                            Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
+                            Vec::from([Declaration::new("display".to_string(), "flex".to_string()),])
+                        )
+                    ])
+                ),
+                case(
+                    ElementData::new("a".to_string(), AttributeMap::from([
+                        ("id".to_string(), "id".to_string()),
+                        ("class".to_string(), "link link1 link2".to_string())
+                    ])),
+                    "a { display: block; }  b { height: 10px; } a.link { display: flex; } #id { color: red; } a.link1.link2 { background-color: green; }",
+                    Vec::from([
+                        Rule::new(
+                            Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
+                            Vec::from([Declaration::new("display".to_string(), "block".to_string()),])
+                        ),
+                        Rule::new(
+                            Vec::from([Selector::new(Some("a".to_string()), None, Vec::from(["link".to_string()]))]),
+                            Vec::from([Declaration::new("display".to_string(), "flex".to_string()),])
+                        ),
+                        Rule::new(
+                            Vec::from([Selector::new(None, Some("id".to_string()), Vec::new())]),
+                            Vec::from([Declaration::new("color".to_string(), "red".to_string()),])
+                        ),
+                        Rule::new(
+                            Vec::from([Selector::new(Some("a".to_string()), None, Vec::from(["link1".to_string(), "link2".to_string()]))]),
+                            Vec::from([Declaration::new("background-color".to_string(), "green".to_string()),])
+                        ),
+                    ])
+                ),
+            )]
+            fn matched_rules_for_the_element(element_data: ElementData, stylesheet_data: &str, expected_rules: Vec<Rule>) {
+                let stylesheet = css::parse(stylesheet_data.to_string());
+                let rules = matching_rules(&element_data, &stylesheet);
+
+                dbg!(&rules);
+                assert_eq!(rules.len(), expected_rules.len());
+
+                for ((_, rule), expected_rule) in rules.iter().zip(expected_rules) {
+                    assert_eq!(**rule, expected_rule)
+                }
+            }
+        }
+
+        describe "'specified_values' returns a propaty map for the element in specificity order of rules" {
+            #[rstest(element_data, stylesheet_data, expected_property_map,
+                case(
+                    ElementData::new("a".to_string(), AttributeMap::new()),
+                    "",
+                    PropertyMap::new(),
+                ),
+                case(
+                    ElementData::new("a".to_string(), AttributeMap::new()),
+                    "a { display: block; }",
+                    PropertyMap::from([
+                        ("display".to_string(), "block".to_string())
+                    ]),
+                ),
+                case(
+                    ElementData::new("a".to_string(), AttributeMap::new()),
+                    "a { display: block; } a { display: flex; }",
+                    PropertyMap::from([
+                        ("display".to_string(), "flex".to_string())
+                    ])
+                ),
+                case(
+                    ElementData::new("a".to_string(), AttributeMap::from([
+                        ("id".to_string(), "id".to_string()),
+                        ("class".to_string(), "link link1 link2".to_string())
+                    ])),
+                    "a { display: block; }  b { height: 10px; } a.link { display: flex; } #id { color: red; color: blue; color: white; color: black; } a.link1.link2 { background-color: green; }",
+                    PropertyMap::from([
+                        ("display".to_string(), "flex".to_string()),
+                        ("color".to_string(), "black".to_string()),
+                        ("background-color".to_string(), "green".to_string()),
+                    ])
+                ),
+            )]
+            fn matched_property_map_for_the_element_in_specificity_order(element_data: ElementData, stylesheet_data: &str, expected_property_map: PropertyMap) {
+                let stylesheet = css::parse(stylesheet_data.to_string());
+                assert_eq!(specified_values(&element_data, &stylesheet), expected_property_map);
             }
         }
     }
