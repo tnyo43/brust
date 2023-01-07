@@ -310,7 +310,6 @@ mod tests {
                     ),
                     case(
                         "<div><div><div><div></div></div></div></div>",
-                        // Node::text("a".to_string())
                         Node::element("div".to_string(), AttributeMap::new(), Vec::<Node>::from([
                             Node::element("div".to_string(), AttributeMap::new(), Vec::<Node>::from([
                                 Node::element("div".to_string(), AttributeMap::new(), Vec::<Node>::from([
