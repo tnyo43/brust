@@ -67,11 +67,39 @@ impl Parser {
         Node::text(self.consume_while(|c| c != '>'))
     }
 
+    fn parse_attribute(&mut self) -> (String, String) {
+        let name = self.parse_tag_string();
+        assert!(self.consume_char() == '=');
+        let open_quote = self.consume_char();
+        assert!(open_quote == '"' || open_quote == '\'');
+        let value = self.parse_tag_string();
+        let close_quote = self.consume_char();
+        assert!(close_quote == open_quote);
+        (name, value)
+    }
+
+    fn parse_attributes(&mut self) -> AttributeMap {
+        let mut attributes = AttributeMap::new();
+
+        loop {
+            self.consume_whitespace();
+
+            if self.next_char() == '>' {
+                break;
+            }
+
+            let (name, value) = self.parse_attribute();
+            attributes.insert(name, value);
+        }
+
+        attributes
+    }
+
     fn parse_element(&mut self) -> Node {
         assert!(self.consume_char() == '<');
 
         let name = self.parse_tag_string();
-        let attributes = AttributeMap::new();
+        let attributes = self.parse_attributes();
 
         assert!(self.consume_char() == '>');
 
@@ -219,6 +247,24 @@ mod tests {
                     let mut parser = Parser::new("<div />".to_string());
 
                     parser.parse_element();
+                }
+            }
+
+            describe "returns element with attribute" {
+                #[rstest(input, expected,
+                    case(
+                        "<div id=\"container\"></div>",
+                        Node::element("div".to_string(), AttributeMap::from([("id".to_string(), "container".to_string())]), Vec::<Node>::new())
+                    ),
+                    case(
+                        "<p id=\"paragraph1\" class='ppp'></p>",
+                        Node::element("p".to_string(), AttributeMap::from([("id".to_string(), "paragraph1".to_string()), ("class".to_string(), "ppp".to_string())]), Vec::<Node>::new())
+                    )
+                )]
+                fn test_parse_attributes_with_single_attribute(input: &str, expected: Node) {
+                    let mut parser = Parser::new(input.to_string());
+
+                    assert_eq!(parser.parse_element(), expected)
                 }
             }
         }
