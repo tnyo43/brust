@@ -11,6 +11,17 @@ pub struct Declaration {
     value: String,
 }
 
+#[derive(Debug, PartialEq)]
+pub struct Rule {
+    selectors: Vec<Selector>,
+    declarations: Vec<Declaration>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct StyleSheet {
+    rules: Vec<Rule>,
+}
+
 impl Selector {
     pub fn new(tag: Option<String>, id: Option<String>, class: Vec<String>) -> Self {
         Selector {
@@ -27,5 +38,20 @@ impl Declaration {
             name: name,
             value: value,
         }
+    }
+}
+
+impl Rule {
+    pub fn new(selectors: Vec<Selector>, declarations: Vec<Declaration>) -> Self {
+        Rule {
+            selectors: selectors,
+            declarations: declarations,
+        }
+    }
+}
+
+impl StyleSheet {
+    pub fn new(rules: Vec<Rule>) -> Self {
+        StyleSheet { rules: rules }
     }
 }

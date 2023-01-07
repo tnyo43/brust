@@ -1,6 +1,6 @@
 use crate::{
     parser::Parser,
-    style::{Declaration, Selector},
+    style::{Declaration, Rule, Selector, StyleSheet},
 };
 
 struct CSSParser {
@@ -99,6 +99,37 @@ impl CSSParser {
 
         declarations
     }
+
+    fn parse_rule(&mut self) -> Rule {
+        self.parser.consume_whitespace();
+        let selectors = self.parse_selectors();
+
+        self.parser.consume_whitespace();
+        let declarations = self.parse_declarations();
+
+        Rule::new(selectors, declarations)
+    }
+
+    fn parse_stylesheet(&mut self) -> StyleSheet {
+        let mut rules = Vec::new();
+
+        loop {
+            self.parser.consume_whitespace();
+
+            if self.parser.eof() {
+                break;
+            }
+
+            rules.push(self.parse_rule());
+        }
+
+        StyleSheet::new(rules)
+    }
+}
+
+fn parse(data: String) -> StyleSheet {
+    let mut parser = CSSParser::new(data);
+    parser.parse_stylesheet()
 }
 
 #[cfg(test)]
@@ -113,7 +144,6 @@ mod tests {
 
     speculate! {
         describe "'parse_selectors' parse selector" {
-            #[ignore]
             #[rstest(input, expected,
                 case(
                     ".hoge__fizz-bar",
@@ -151,7 +181,7 @@ mod tests {
             }
         }
 
-        describe "'parse_declarations' parse declaration block" {
+        describe "'parse_declarations' parses declaration block" {
             #[rstest]
             fn test_empty_block() {
                 let mut css_parser = CSSParser::new("{}".to_string());
@@ -171,6 +201,56 @@ mod tests {
                 let mut css_parser = CSSParser::new(input.to_string());
 
                 assert_eq!(css_parser.parse_declarations(), expected);
+            }
+        }
+
+        describe "'parse_rule' returns rule" {
+            #[rstest(input, expected,
+                case(
+                    "a#link, b.thin { display: flex; margin-top: 16px; }",
+                    Rule::new(
+                        Vec::from([
+                            Selector::new(Some("a".to_string()), Some("link".to_string()), Vec::new()),
+                            Selector::new(Some("b".to_string()), None, Vec::from(["thin".to_string()]))
+                        ]),
+                        Vec::from([
+                            Declaration::new("display".to_string(), "flex".to_string()),
+                            Declaration::new("margin-top".to_string(), "16px".to_string()),
+                        ])
+                    )
+                ),
+            )]
+            fn test_rule(input: &str, expected: Rule) {
+                let mut css_parser = CSSParser::new(input.to_string());
+
+                assert_eq!(css_parser.parse_rule(), expected);
+            }
+        }
+
+        describe "'parse' returns stylesheet" {
+            #[rstest(data, expected,
+                case(
+                    "a#link {\n display: flex; color: #d3a003; \n} \n\n  \n .cls, #modal { position: absolute; \n top: 50%; } \n ",
+                    StyleSheet::new(Vec::from([
+                        Rule::new(
+                            Vec::from([Selector::new(Some("a".to_string()), Some("link".to_string()), Vec::new())]),
+                            Vec::from([
+                                Declaration::new("display".to_string(), "flex".to_string()),
+                                Declaration::new("color".to_string(), "#d3a003".to_string())
+                            ])
+                        ),
+                        Rule::new(
+                            Vec::from([Selector::new(None, None, Vec::from(["cls".to_string()])), Selector::new(None, Some("modal".to_string()), Vec::new())]),
+                            Vec::from([
+                                Declaration::new("position".to_string(), "absolute".to_string()),
+                                Declaration::new("top".to_string(), "50%".to_string()),
+                            ])
+                        )
+                    ]))
+                )
+            )]
+            fn test_parse(data: &str, expected: StyleSheet) {
+                assert_eq!(parse(data.to_string()), expected);
             }
         }
     }
