@@ -7,7 +7,7 @@ pub struct Selector {
     pub class: Vec<String>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     String(String),
 }
@@ -46,14 +46,6 @@ impl Selector {
             self.class.len(),
             self.tag.iter().count(),
         )
-    }
-}
-
-impl Value {
-    pub fn clone(&self) -> Self {
-        match self {
-            Value::String(s) => Value::String(s.clone()),
-        }
     }
 }
 
