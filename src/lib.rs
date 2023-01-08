@@ -1,3 +1,6 @@
+mod dom;
+mod html;
+
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
