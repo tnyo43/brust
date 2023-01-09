@@ -1,23 +1,43 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub type AttributeMap = HashMap<String, String>;
 
 #[derive(Debug, PartialEq)]
-struct ElementData {
-    tag_name: String,
+pub struct ElementData {
+    pub tag_name: String,
     attributes: AttributeMap,
 }
 
 #[derive(Debug, PartialEq)]
-enum NodeType {
+pub enum NodeType {
     Text(String),
     Element(ElementData),
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Node {
-    children: Vec<Node>,
-    node_type: NodeType,
+    pub children: Vec<Node>,
+    pub node_type: NodeType,
+}
+
+impl ElementData {
+    pub fn new(name: String, attributes: AttributeMap) -> Self {
+        ElementData {
+            tag_name: name,
+            attributes: attributes,
+        }
+    }
+
+    pub fn id(&self) -> Option<&String> {
+        self.attributes.get("id")
+    }
+
+    pub fn classes(&self) -> HashSet<&str> {
+        match self.attributes.get("class") {
+            Some(classes) => classes.split(' ').collect(),
+            None => HashSet::new(),
+        }
+    }
 }
 
 impl Node {

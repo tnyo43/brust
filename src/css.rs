@@ -127,7 +127,7 @@ impl CSSParser {
     }
 }
 
-fn parse(data: String) -> StyleSheet {
+pub fn parse(data: String) -> StyleSheet {
     let mut parser = CSSParser::new(data);
     parser.parse_stylesheet()
 }

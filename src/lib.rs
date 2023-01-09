@@ -3,6 +3,7 @@ mod dom;
 mod html;
 mod parser;
 mod style;
+mod styled_dom;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
