@@ -1,10 +1,44 @@
 use crate::{
     parser::Parser,
-    style::{Declaration, Rule, Selector, StyleSheet},
+    style::{Color, Declaration, Rule, Selector, StyleSheet, Unit, Value},
 };
 
 struct CSSParser {
     base: Parser,
+}
+
+fn parse_value(value: String) -> Value {
+    if value.starts_with('#') {
+        assert!(value.len() == 7);
+        let r = u8::from_str_radix(&value[1..=2], 16).unwrap();
+        let g = u8::from_str_radix(&value[3..=4], 16).unwrap();
+        let b = u8::from_str_radix(&value[5..=6], 16).unwrap();
+        return Value::color(r, g, b);
+    }
+
+    if ('0'..='9').contains(&value.chars().next().unwrap()) {
+        let (num, unit) = if value.ends_with("px") {
+            ((value[..value.len() - 2]).parse::<f32>().unwrap(), Unit::Px)
+        } else if value.ends_with("%") {
+            (
+                (value[..value.len() - 1]).parse::<f32>().unwrap(),
+                Unit::Percent,
+            )
+        } else if value.ends_with("rem") {
+            (
+                (value[..value.len() - 3]).parse::<f32>().unwrap(),
+                Unit::Rem,
+            )
+        } else if value.ends_with("em") {
+            ((value[..value.len() - 2]).parse::<f32>().unwrap(), Unit::Em)
+        } else {
+            ((value).parse::<f32>().unwrap(), Unit::None)
+        };
+
+        return Value::size(num, unit);
+    }
+
+    Value::keyword(value)
 }
 
 impl CSSParser {
@@ -91,10 +125,10 @@ impl CSSParser {
             assert!(self.base.consume_char() == ':');
             self.base.consume_whitespace();
 
-            let value = self.base.consume_while(|c| c != ';');
+            let valueText = self.base.consume_while(|c| c != ';');
             assert!(self.base.consume_char() == ';');
 
-            declarations.push(Declaration::new(name, value));
+            declarations.push(Declaration::new(name, parse_value(valueText)));
         }
 
         declarations
@@ -143,6 +177,51 @@ mod tests {
     use super::*;
 
     speculate! {
+        describe "'parse_value'" {
+            describe "if value start with '#', value is parsed to color" {
+                #[rstest(input, expected,
+                    case("#000000", Value::color(0, 0, 0)),
+                    case("#123456", Value::color(18, 52, 86)),
+                    case("#abcdef", Value::color(171, 205, 239)),
+                )]
+                fn parse_color_code(input: &str, expected: Value) {
+                    assert_eq!(parse_value(input.to_string()), expected);
+                }
+
+                #[should_panic]
+                #[rstest(input,
+                    case("#123"),
+                    case("#1111111"),
+                    case("#zyxwvut"),
+                )]
+                fn fail_to_parse_with_invalid_color(input: &str) {
+                    parse_value(input.to_string());
+                }
+            }
+
+            describe "if value start with number, value is parsed to size" {
+                #[rstest(input, expected,
+                    case("10px", Value::size(10.0, Unit::Px)),
+                    case("43%", Value::size(43.0, Unit::Percent)),
+                    case("1.4em", Value::size(1.4, Unit::Em)),
+                    case("0.1rem", Value::size(0.1, Unit::Rem)),
+                    case("10000", Value::size(10000.0, Unit::None)),
+                )]
+                fn parse_color_code(input: &str, expected: Value) {
+                    assert_eq!(parse_value(input.to_string()), expected);
+                }
+
+                #[should_panic]
+                #[rstest(input,
+                    case("1hogehogepx"),
+                    case("1ab"),
+                )]
+                fn fail_to_parse_with_invalid_size(input: &str) {
+                    parse_value(input.to_string());
+                }
+            }
+        }
+
         describe "'parse_selectors' parse selector" {
             #[rstest(input, expected,
                 case(
@@ -191,10 +270,15 @@ mod tests {
 
             #[rstest(input, expected,
                 case("{}", Vec::new()),
-                case("{ display: block; }", Vec::from([Declaration::new("display".to_string(), "block".to_string())])),
+                case("{ display: block; }", Vec::from([Declaration::new("display".to_string(), Value::Keyword("block".to_string()))])),
                 case(
-                    "{ border: 1px solid #123456; background-color: red; }",
-                    Vec::from([Declaration::new("border".to_string(), "1px solid #123456".to_string()), Declaration::new("background-color".to_string(), "red".to_string())])
+                    "{ border-width: 1px; border-style: solid; border-color: #123456; background-color: red; }",
+                    Vec::from([
+                        Declaration::new("border-width".to_string(), Value::size(1.0, Unit::Px)),
+                        Declaration::new("border-style".to_string(), Value::keyword("solid".to_string())),
+                        Declaration::new("border-color".to_string(), Value::color(18, 52, 86)),
+                        Declaration::new("background-color".to_string(), Value::Keyword("red".to_string()))
+                    ])
                 )
             )]
             fn test_parse_declarations(input: &str, expected: Vec<Declaration>) {
@@ -214,8 +298,8 @@ mod tests {
                             Selector::new(Some("b".to_string()), None, Vec::from(["thin".to_string()]))
                         ]),
                         Vec::from([
-                            Declaration::new("display".to_string(), "flex".to_string()),
-                            Declaration::new("margin-top".to_string(), "16px".to_string()),
+                            Declaration::new("display".to_string(), Value::Keyword("flex".to_string())),
+                            Declaration::new("margin-top".to_string(), Value::size(16.0, Unit::Px)),
                         ])
                     )
                 ),
@@ -235,15 +319,15 @@ mod tests {
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), Some("link".to_string()), Vec::new())]),
                             Vec::from([
-                                Declaration::new("display".to_string(), "flex".to_string()),
-                                Declaration::new("color".to_string(), "#d3a003".to_string())
+                                Declaration::new("display".to_string(), Value::Keyword("flex".to_string())),
+                                Declaration::new("color".to_string(), Value::color(211, 160, 3))
                             ])
                         ),
                         Rule::new(
                             Vec::from([Selector::new(None, None, Vec::from(["cls".to_string()])), Selector::new(None, Some("modal".to_string()), Vec::new())]),
                             Vec::from([
-                                Declaration::new("position".to_string(), "absolute".to_string()),
-                                Declaration::new("top".to_string(), "50%".to_string()),
+                                Declaration::new("position".to_string(), Value::Keyword("absolute".to_string())),
+                                Declaration::new("top".to_string(), Value::size(50.0, Unit::Percent)),
                             ])
                         )
                     ]))

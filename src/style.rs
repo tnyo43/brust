@@ -5,10 +5,33 @@ pub struct Selector {
     pub class: Vec<String>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum Unit {
+    Px,
+    Percent,
+    Em,
+    Rem,
+    None,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Color {
+    r: u8,
+    g: u8,
+    b: u8,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Value {
+    Keyword(String),
+    Size(f32, Unit),
+    Color(Color),
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Declaration {
     pub name: String,
-    pub value: String,
+    pub value: Value,
 }
 
 #[derive(Debug, PartialEq)]
@@ -42,8 +65,22 @@ impl Selector {
     }
 }
 
+impl Value {
+    pub fn keyword(value: String) -> Self {
+        Value::Keyword(value)
+    }
+
+    pub fn size(x: f32, unit: Unit) -> Self {
+        Value::Size(x, unit)
+    }
+
+    pub fn color(r: u8, g: u8, b: u8) -> Self {
+        Value::Color(Color { r, g, b })
+    }
+}
+
 impl Declaration {
-    pub fn new(name: String, value: String) -> Self {
+    pub fn new(name: String, value: Value) -> Self {
         Declaration {
             name: name,
             value: value,

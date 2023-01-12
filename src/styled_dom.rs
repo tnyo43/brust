@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crate::dom::{ElementData, Node, NodeType};
-use crate::style::{Rule, Selector, Specificity, StyleSheet};
+use crate::style::{Rule, Selector, Specificity, StyleSheet, Value};
 
 type MatchedRule<'a> = (Specificity, &'a Rule);
 
-type PropertyMap = HashMap<String, String>;
+type PropertyMap = HashMap<String, Value>;
 
 pub struct StyledNode<'a> {
     node: &'a Node,
@@ -196,7 +196,7 @@ mod tests {
                     Vec::from([
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
-                            Vec::from([Declaration::new("display".to_string(), "block".to_string())])
+                            Vec::from([Declaration::new("display".to_string(), Value::Keyword("block".to_string()))])
                         )
                     ])
                 ),
@@ -206,11 +206,11 @@ mod tests {
                     Vec::from([
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
-                            Vec::from([Declaration::new("display".to_string(), "block".to_string()),])
+                            Vec::from([Declaration::new("display".to_string(),Value::Keyword("block".to_string()))])
                         ),
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
-                            Vec::from([Declaration::new("display".to_string(), "flex".to_string()),])
+                            Vec::from([Declaration::new("display".to_string(), Value::Keyword("flex".to_string()))])
                         )
                     ])
                 ),
@@ -223,19 +223,19 @@ mod tests {
                     Vec::from([
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::new())]),
-                            Vec::from([Declaration::new("display".to_string(), "block".to_string()),])
+                            Vec::from([Declaration::new("display".to_string(), Value::Keyword("block".to_string()))])
                         ),
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::from(["link".to_string()]))]),
-                            Vec::from([Declaration::new("display".to_string(), "flex".to_string()),])
+                            Vec::from([Declaration::new("display".to_string(), Value::Keyword("flex".to_string()))])
                         ),
                         Rule::new(
                             Vec::from([Selector::new(None, Some("id".to_string()), Vec::new())]),
-                            Vec::from([Declaration::new("color".to_string(), "red".to_string()),])
+                            Vec::from([Declaration::new("color".to_string(), Value::Keyword("red".to_string()))])
                         ),
                         Rule::new(
                             Vec::from([Selector::new(Some("a".to_string()), None, Vec::from(["link1".to_string(), "link2".to_string()]))]),
-                            Vec::from([Declaration::new("background-color".to_string(), "green".to_string()),])
+                            Vec::from([Declaration::new("background-color".to_string(), Value::Keyword("green".to_string()))])
                         ),
                     ])
                 ),
@@ -264,14 +264,14 @@ mod tests {
                     ElementData::new("a".to_string(), AttributeMap::new()),
                     "a { display: block; }",
                     PropertyMap::from([
-                        ("display".to_string(), "block".to_string())
+                        ("display".to_string(), Value::Keyword("block".to_string()))
                     ]),
                 ),
                 case(
                     ElementData::new("a".to_string(), AttributeMap::new()),
                     "a { display: block; } a { display: flex; }",
                     PropertyMap::from([
-                        ("display".to_string(), "flex".to_string())
+                        ("display".to_string(), Value::Keyword("flex".to_string()))
                     ])
                 ),
                 case(
@@ -281,9 +281,9 @@ mod tests {
                     ])),
                     "a { display: block; }  b { height: 10px; } a.link { display: flex; } #id { color: red; color: blue; color: white; color: black; } a.link1.link2 { background-color: green; }",
                     PropertyMap::from([
-                        ("display".to_string(), "flex".to_string()),
-                        ("color".to_string(), "black".to_string()),
-                        ("background-color".to_string(), "green".to_string()),
+                        ("display".to_string(), Value::Keyword("flex".to_string())),
+                        ("color".to_string(), Value::Keyword("black".to_string())),
+                        ("background-color".to_string(), Value::Keyword("green".to_string())),
                     ])
                 ),
             )]
