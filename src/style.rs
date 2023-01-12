@@ -23,7 +23,7 @@ pub struct Color {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
-    String(String),
+    Keyword(String),
     Size(f32, Unit),
     Color(Color),
 }
@@ -66,8 +66,8 @@ impl Selector {
 }
 
 impl Value {
-    pub fn string(value: String) -> Self {
-        Value::String(value)
+    pub fn keyword(value: String) -> Self {
+        Value::Keyword(value)
     }
 
     pub fn size(x: f32, unit: Unit) -> Self {
